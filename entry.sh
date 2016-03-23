@@ -4,7 +4,7 @@ set -e
 test "$DEBUG" == 'true' && set -x
 
 DAEMON=sshd
-SSH_CONFIG_VOLUME=/root/ssh-config
+SSH_CONFIG_VOLUME="$HOME"/ssh-config
 
 # Copy default config from cache
 test "$(ls -A /etc/ssh)" || \
@@ -12,12 +12,17 @@ test "$(ls -A /etc/ssh)" || \
 
 # Generate Host keys, if required
 test "$(ls -A /etc/ssh/ssh_host_*)" || \
-   ssh-keygen -A
+    ssh-keygen -A
 
+test -d "$HOME"/.ssh || mkdir "$HOME"/.ssh
 # Fix permissions, if writable
-test -w ~/.ssh && {
-  test -d "$SSH_CONFIG_VOLUME" -a "$(ls -A "$SSH_CONFIG_VOLUME")" && cp -a "$SSH_CONFIG_VOLUME"/* ~/.ssh
-  chown -R root:root ~/.ssh && chmod 700 ~/.ssh/ && chmod 600 ~/.ssh/* || echo "WARNING: No SSH authorized_keys or config found for root"
+test -w "$HOME"/.ssh && {
+  test -d "$SSH_CONFIG_VOLUME" -a "$(ls -A "$SSH_CONFIG_VOLUME")" && cp -a "$SSH_CONFIG_VOLUME"/* "$HOME"/.ssh
+  chown -R $_USER:$_USER "$HOME"/.ssh && chmod 700 "$HOME"/.ssh/ && chmod 600 "$HOME"/.ssh/*
+}
+ak="$HOME"/.ssh/authorized_keys
+test ! -f "$ak" && echo "WARNING: No SSH authorized_keys found at '$ak'" || {
+  echo "$ak:"; cat "$ak"
 }
 
 stop() {
@@ -42,4 +47,3 @@ if [ "$(basename $1)" == "$DAEMON" ]; then
 else
     exec "$@"
 fi
-
